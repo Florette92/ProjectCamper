@@ -2,6 +2,13 @@ import { SPECIES, SPECIES_LIST, STAGE_LABELS, STAGE_XP } from '../data/creatures
 import { CARE_ACTIONS } from '../game/constants.js';
 import { MINIGAMES } from '../minigames/MiniGames.js';
 
+// Escapes user-supplied strings before insertion via innerHTML.
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 // Binds the DOM HUD to the GameState and SceneManager. Handles care buttons,
 // stat bars, toasts, modals (roster / collection / hatch) and the start screen.
 export class UI {
@@ -17,6 +24,10 @@ export class UI {
 
     this._wireCareButtons();
     this._wireTopbar();
+    this._modalClosable = true;
+    this.modalRoot.addEventListener('click', (e) => {
+      if (this._modalClosable && e.target === this.modalRoot) this._closeModal();
+    });
 
     this.game.onChange(() => this.refresh());
   }
@@ -118,7 +129,7 @@ export class UI {
       return `
         <div class="card ${active ? '' : ''}" data-id="${c.id}" style="${active ? 'border-color:var(--accent)' : ''}">
           <div class="big">${c.stage === 'egg' ? '🥚' : c.def.emoji}</div>
-          <div class="title">${c.name}</div>
+          <div class="title">${esc(c.name)}</div>
           <div class="meta">${c.def.name} · ${STAGE_LABELS[c.stage]}</div>
           <div class="meta">Lv ${c.level} · ${active ? '★ active' : 'tap to select'}</div>
         </div>`;
@@ -273,13 +284,11 @@ export class UI {
   }
 
   _modal(html, { closable = true } = {}) {
+    this._modalClosable = closable;
     this.modalRoot.classList.remove('hidden');
     this.modalRoot.innerHTML = `<div class="modal">${closable ? '<button class="modal-close">✕</button>' : ''}${html}</div>`;
     if (closable) {
       this.modalRoot.querySelector('.modal-close').addEventListener('click', () => this._closeModal());
-      this.modalRoot.addEventListener('click', (e) => {
-        if (e.target === this.modalRoot) this._closeModal();
-      }, { once: true });
     }
   }
 

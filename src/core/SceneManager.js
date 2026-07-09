@@ -204,8 +204,9 @@ export class SceneManager {
   }
 
   update() {
-    const t = this.clock.getElapsedTime();
+    // getDelta() must come first: getElapsedTime() consumes the delta internally.
     const dt = this.clock.getDelta();
+    const t = this.clock.elapsedTime;
     const mesh = this.currentMesh;
 
     if (mesh) {

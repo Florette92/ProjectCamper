@@ -303,16 +303,20 @@ function buildBody(def, scale) {
 // gently up-curling bezier, so it reads as a wisp of holographic fire.
 function buildFlameTail(baseMat, tipMat) {
   const tail = new THREE.Group();
+  // A near-planar flame that points straight up (local +Y) with a slight
+  // outward curl at the tip. Kept in the XY plane so a fan of these can be
+  // rotated about Z to radiate out behind the fox like a peacock of fire.
   const curve = new THREE.QuadraticBezierCurve3(
     new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, 0.4, -0.42),
-    new THREE.Vector3(0, 0.95, -0.2)
+    new THREE.Vector3(0.02, 0.6, 0),
+    new THREE.Vector3(0.14, 1.15, 0)
   );
-  const N = 9;
+  const N = 16;
   for (let i = 0; i < N; i++) {
     const s = i / (N - 1);
-    const r = 0.17 * (1 - s * 0.72); // taper toward a fine flame tip
-    const seg = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), i >= N - 3 ? tipMat : baseMat);
+    // Slight mid-tail bulge then taper to a point, like a fluffy fox tail.
+    const r = 0.2 * (1 - s * 0.82) * (0.85 + 0.3 * Math.sin(Math.PI * s));
+    const seg = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), s > 0.55 ? tipMat : baseMat);
     seg.position.copy(curve.getPoint(s));
     tail.add(seg);
   }
@@ -322,13 +326,12 @@ function buildFlameTail(baseMat, tipMat) {
 // A large upright triangular fox ear with an inner accent.
 function buildFoxEar(sx, bodyMat, innerMat) {
   const ear = new THREE.Group();
-  const outer = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.44, 4), bodyMat);
-  const inner = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.34, 4), innerMat);
-  inner.position.z = 0.03;
-  inner.position.y = -0.02;
+  const outer = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.56, 4), bodyMat);
+  const inner = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.4, 4), innerMat);
+  inner.position.z = 0.05;
+  inner.position.y = 0.02;
   ear.add(outer, inner);
-  ear.rotation.z = sx * -0.28;
-  ear.rotation.x = -0.12;
+  ear.rotation.z = sx * -0.18;
   return ear;
 }
 
@@ -353,52 +356,42 @@ function buildFox(def, scale, tailCount) {
   belly.position.set(0, 0.6, 0.26);
   group.add(belly);
 
-  // Big chibi head.
+  // Big chibi head, slightly tapered toward a fox muzzle.
   const head = new THREE.Group();
   const skull = new THREE.Mesh(new THREE.SphereGeometry(0.5, 28, 28), bodyMat);
-  skull.scale.set(1.02, 0.96, 0.98);
+  skull.scale.set(1.0, 0.94, 1.0);
   skull.castShadow = true;
   head.add(skull);
 
-  // Cheek fluff tufts.
-  for (const sx of [-1, 1]) {
-    const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.24, 5), bellyMat);
-    tuft.position.set(sx * 0.44, -0.08, 0.08);
-    tuft.rotation.z = sx * (Math.PI / 2);
-    head.add(tuft);
-  }
-
-  // Big expressive eyes.
+  // Big expressive anime eyes, set into the face.
   const eyeL = eyeMesh(p.eye);
   const eyeR = eyeMesh(p.eye);
-  eyeL.scale.setScalar(1.55);
-  eyeR.scale.setScalar(1.55);
-  eyeL.position.set(-0.19, 0.04, 0.4);
-  eyeR.position.set(0.19, 0.04, 0.4);
+  eyeL.scale.setScalar(1.2);
+  eyeR.scale.setScalar(1.2);
+  eyeL.position.set(-0.2, 0.05, 0.44);
+  eyeR.position.set(0.2, 0.05, 0.44);
   head.add(eyeL, eyeR);
   anim.eyes = [eyeL, eyeR];
 
-  // Snout + nose.
-  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), bellyMat);
-  snout.scale.set(1, 0.72, 0.9);
-  snout.position.set(0, -0.14, 0.44);
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), mat(p.eye));
-  nose.position.set(0, -0.1, 0.58);
-  head.add(snout, nose);
+  // Tapered muzzle with a small nose.
+  const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.16, 18, 18), bodyMat);
+  muzzle.scale.set(0.8, 0.6, 0.7);
+  muzzle.position.set(0, -0.16, 0.46);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), mat(p.eye));
+  nose.position.set(0, -0.13, 0.6);
+  head.add(muzzle, nose);
 
-  // Fiery brow markings.
-  for (const sx of [-1, 1]) {
-    const brow = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 4), accentMat);
-    brow.position.set(sx * 0.14, 0.34, 0.36);
-    brow.rotation.z = sx * -0.5;
-    head.add(brow);
-  }
+  // Single fiery tuft on the forehead.
+  const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.34, 5), accentMat);
+  tuft.position.set(0, 0.42, 0.16);
+  tuft.rotation.x = -0.2;
+  head.add(tuft);
 
   // Big fox ears.
   const earL = buildFoxEar(-1, bodyMat, accentMat);
   const earR = buildFoxEar(1, bodyMat, accentMat);
-  earL.position.set(-0.26, 0.46, -0.02);
-  earR.position.set(0.26, 0.46, -0.02);
+  earL.position.set(-0.28, 0.52, -0.04);
+  earR.position.set(0.28, 0.52, -0.04);
   head.add(earL, earR);
 
   head.position.y = 1.24;
@@ -427,20 +420,22 @@ function buildFox(def, scale, tailCount) {
     group.add(paw);
   }
 
-  // Fan of curling flame tails, spread horizontally behind the fox. The whole
-  // fan is parented to anim.tail so the idle loop sways it as one.
+  // Flame tails radiating out behind the fox in a wide fan, like the
+  // reference's nine-tailed halo of fire. Each tail points up locally and is
+  // rolled about Z so the set sweeps from lower-left, up over the back, to
+  // lower-right. The fan sits behind the body so it frames the silhouette.
   const tailFan = new THREE.Group();
-  const tipMat = mat(p.belly, { glow: true });
+  const tipMat = mat(p.accent, { glow: true });
+  const spread = 1.4; // outermost tail tilts ~80 deg off vertical
   for (let i = 0; i < tailCount; i++) {
-    const t = buildFlameTail(accentMat, tipMat);
+    const t = buildFlameTail(bodyMat, tipMat);
     const frac = tailCount === 1 ? 0 : i / (tailCount - 1) - 0.5; // -0.5 .. 0.5
-    t.rotation.y = frac * 1.9;
-    t.rotation.z = frac * 0.5;
-    t.rotation.x = -0.2 - Math.abs(frac) * 0.25;
-    t.scale.setScalar(1 - Math.abs(frac) * 0.18);
+    t.rotation.z = frac * 2 * spread; // upper radial fan in the XY plane
+    t.scale.setScalar(0.95 - Math.abs(frac) * 0.12);
     tailFan.add(t);
   }
-  tailFan.position.set(0, 0.5, -0.34);
+  tailFan.rotation.x = -0.62; // lean the fan back so it clears the head
+  tailFan.position.set(0, 0.5, -0.52); // behind and below the head
   group.add(tailFan);
   anim.tail = tailFan;
 

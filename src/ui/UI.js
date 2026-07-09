@@ -422,6 +422,7 @@ export class UI {
     this._toolCleanup = null;
     if (this._toolLayer) this._toolLayer.remove();
     this._toolLayer = null;
+    this._cleaning = false;
   }
 
   // ---- cleaning (sponge + dirt) --------------------------------------------
@@ -497,13 +498,15 @@ export class UI {
     this._dismissTool();
     if (!c) return;
     const res = c.applyCare('clean');
+    if (!res.ok) {
+      this.toast(res.reason);
+      return;
+    }
     this._reactTo('clean', res);
     this.game.save();
     this.refresh();
-    if (res.ok) {
-      const def = CARE_ACTIONS.clean;
-      this.toast(`Squeaky clean! ${def.label} · +${res.xp} XP ✨`);
-    }
+    const def = CARE_ACTIONS.clean;
+    this.toast(`Squeaky clean! ${def.label} · +${res.xp} XP ✨`);
   }
 
   // ---- dirt overlay ---------------------------------------------------------

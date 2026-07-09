@@ -1,5 +1,5 @@
 import { SPECIES, stageForXp, STAGE_XP } from '../data/creatures.js';
-import { BASE_DECAY, STAT_MAX, CARE_ACTIONS, levelForXp } from './constants.js';
+import { BASE_DECAY, STAT_MAX, CARE_ACTIONS, NEED_STATS, EMPTY_BAR_PENALTY, levelForXp } from './constants.js';
 
 let uidCounter = 0;
 function uid() {
@@ -68,6 +68,16 @@ export class Creature {
     } else {
       for (const key of ['hunger', 'hydration', 'cleanliness', 'happiness', 'energy']) {
         this.stats[key] = clamp(this.stats[key] - dtSeconds * BASE_DECAY[key] * (decayMods[key] ?? 1));
+      }
+    }
+
+    // Neglect penalty: every fully-empty need bar drags ALL bars down at an
+    // equal extra rate. The more bars sit at zero, the faster everything drops.
+    const emptyBars = NEED_STATS.filter((key) => this.stats[key] <= 0).length;
+    if (emptyBars > 0) {
+      const penalty = dtSeconds * EMPTY_BAR_PENALTY * emptyBars;
+      for (const key of [...NEED_STATS, 'health']) {
+        this.stats[key] = clamp(this.stats[key] - penalty);
       }
     }
 

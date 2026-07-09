@@ -614,7 +614,9 @@ export class UI {
       const val = Math.round(c.stats[key]);
       const fill = row.querySelector('.bar-fill');
       fill.style.width = `${val}%`;
-      fill.style.background = val > 55 ? 'var(--good)' : val > 25 ? 'var(--warn)' : 'var(--bad)';
+      const state = val > 55 ? 'good' : val > 25 ? 'warn' : 'bad';
+      fill.classList.remove('good', 'warn', 'bad');
+      fill.classList.add(state);
     });
 
     // Disable non-pet actions while an egg (eggs can only be kept warm/petted/fed).

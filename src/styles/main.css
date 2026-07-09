@@ -1,16 +1,21 @@
 :root {
-  --bg-0: #0e1230;
-  --bg-1: #1a1f4d;
-  --panel: rgba(16, 20, 48, 0.82);
-  --panel-border: rgba(140, 170, 255, 0.28);
-  --accent: #7be0ff;
-  --accent-2: #ffce6b;
-  --good: #6bffa0;
-  --warn: #ffd166;
-  --bad: #ff6b8b;
-  --text: #eaf0ff;
-  --text-dim: #9aa6d6;
-  --shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  --bg-0: #0b0820;
+  --bg-1: #1c1550;
+  --panel: rgba(24, 18, 58, 0.82);
+  --panel-border: rgba(150, 120, 255, 0.32);
+  --accent: #6c8cff;
+  --accent-2: #ff9d3b;
+  --neon-blue: #4f8bff;
+  --neon-purple: #a24bff;
+  --neon-pink: #ff3ba7;
+  --neon-orange: #ff9d3b;
+  --neon-teal: #2ee6b0;
+  --good: #2ee6b0;
+  --warn: #ffb03b;
+  --bad: #ff3ba7;
+  --text: #eef0ff;
+  --text-dim: #a9a6d6;
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
@@ -80,7 +85,7 @@ body {
   cursor: grab;
   pointer-events: auto;
   touch-action: none;
-  filter: drop-shadow(0 0 10px rgba(123, 224, 255, 0.7));
+  filter: drop-shadow(0 0 10px rgba(150, 120, 255, 0.7));
   transition: filter 0.15s ease, transform 0.12s ease;
   animation: tool-pop 0.25s ease-out;
 }
@@ -207,9 +212,9 @@ body {
   z-index: 6;
   border-radius: 34px;
   box-shadow:
-    inset 0 0 0 3px rgba(90, 200, 255, 0.35),
-    inset 0 0 22px 6px rgba(60, 180, 255, 0.18),
-    inset 0 0 90px 20px rgba(20, 60, 120, 0.35);
+    inset 0 0 0 3px rgba(150, 110, 255, 0.35),
+    inset 0 0 22px 6px rgba(120, 90, 255, 0.2),
+    inset 0 0 90px 20px rgba(60, 30, 110, 0.38);
 }
 
 #device-bezel::before {
@@ -271,7 +276,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  background: rgba(123, 224, 255, 0.16);
+  background: rgba(150, 120, 255, 0.16);
   border: 1px solid var(--panel-border);
   color: var(--accent);
 }
@@ -300,7 +305,8 @@ body {
   height: 100%;
   width: 0%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent-2), #ff9d5c);
+  background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink), var(--neon-orange));
+  box-shadow: 0 0 8px rgba(255, 59, 167, 0.7);
   transition: width 0.4s ease;
 }
 
@@ -322,7 +328,7 @@ body {
 }
 
 .icon-btn:hover {
-  background: rgba(123, 224, 255, 0.18);
+  background: rgba(150, 120, 255, 0.18);
   transform: translateY(-2px);
 }
 
@@ -351,7 +357,7 @@ body {
 .stat {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .stat-icon {
@@ -360,20 +366,65 @@ body {
   font-size: 16px;
 }
 
+/* Glossy neon health bars. */
 .bar {
+  position: relative;
   flex: 1;
-  height: 12px;
+  height: 16px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(8, 6, 26, 0.72);
+  border: 1px solid rgba(150, 120, 255, 0.2);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.55), inset 0 -1px 1px rgba(255, 255, 255, 0.06);
   overflow: hidden;
 }
 
+/* Little gem at the head of the track, echoing the reference art. */
+.bar::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translateY(-50%) rotate(45deg);
+  border-radius: 2px;
+  background: linear-gradient(135deg, #ffffff, #cfd8ff);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.85);
+  z-index: 2;
+}
+
 .bar-fill {
+  position: relative;
   height: 100%;
   width: 100%;
   border-radius: 999px;
-  background: var(--good);
-  transition: width 0.5s ease, background 0.5s ease;
+  background: linear-gradient(90deg, #17c3a2, #47f5c4);
+  transition: width 0.5s ease, background 0.5s ease, box-shadow 0.5s ease;
+}
+
+/* Top-half sheen for the glossy 3D pill look. */
+.bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 1px 1px 52% 1px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.bar-fill.good {
+  background: linear-gradient(90deg, #17c3a2, #47f5c4);
+  box-shadow: 0 0 10px rgba(46, 230, 176, 0.75);
+}
+
+.bar-fill.warn {
+  background: linear-gradient(90deg, #ff8a3d, #ffcf3a);
+  box-shadow: 0 0 10px rgba(255, 176, 59, 0.75);
+}
+
+.bar-fill.bad {
+  background: linear-gradient(90deg, #ff2e8b, #ff67b4);
+  box-shadow: 0 0 11px rgba(255, 59, 167, 0.8);
 }
 
 /* ---------- Care dock ---------- */
@@ -419,7 +470,7 @@ body {
 }
 
 .care-btn:hover {
-  background: rgba(123, 224, 255, 0.16);
+  background: rgba(150, 120, 255, 0.16);
   transform: translateY(-3px);
 }
 

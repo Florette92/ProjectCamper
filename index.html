@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Critter Cove — 3D Creature Collector</title>
+    <link rel="stylesheet" href="./src/styles/main.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+
+      <!-- Holographic screen overlays: scanlines, flicker sheen and vignette -->
+      <div id="holo-overlay" aria-hidden="true">
+        <div class="holo-scanlines"></div>
+        <div class="holo-sheen"></div>
+        <div class="holo-vignette"></div>
+      </div>
+      <!-- Handheld-device bezel framing the projection screen -->
+      <div id="device-bezel" aria-hidden="true"></div>
+
+      <!-- Top bar: creature identity + level -->
+      <header id="topbar" class="hidden">
+        <div class="topbar-left">
+          <span id="creature-emoji" class="creature-emoji">🥚</span>
+          <div class="creature-id">
+            <div id="creature-name" class="creature-name">—</div>
+            <div id="creature-species" class="creature-species">—</div>
+          </div>
+        </div>
+        <div class="topbar-center">
+          <div id="stage-badge" class="stage-badge">Egg</div>
+          <div class="level-wrap">
+            <span id="level-label" class="level-label">Lv 1</span>
+            <div class="xp-track"><div id="xp-fill" class="xp-fill"></div></div>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button id="btn-roster" class="icon-btn" title="My creatures">🐾</button>
+          <button id="btn-collection" class="icon-btn" title="Collection">📖</button>
+          <button id="btn-save" class="icon-btn" title="Save game">💾</button>
+        </div>
+      </header>
+
+      <!-- Stat bars -->
+      <section id="stats-panel" class="hidden">
+        <div class="stat" data-stat="hunger"><span class="stat-icon">🍖</span><div class="bar"><div class="bar-fill"></div></div></div>
+        <div class="stat" data-stat="hydration"><span class="stat-icon">💧</span><div class="bar"><div class="bar-fill"></div></div></div>
+        <div class="stat" data-stat="cleanliness"><span class="stat-icon">🧼</span><div class="bar"><div class="bar-fill"></div></div></div>
+        <div class="stat" data-stat="happiness"><span class="stat-icon">😊</span><div class="bar"><div class="bar-fill"></div></div></div>
+        <div class="stat" data-stat="energy"><span class="stat-icon">⚡</span><div class="bar"><div class="bar-fill"></div></div></div>
+        <div class="stat" data-stat="health"><span class="stat-icon">❤️</span><div class="bar"><div class="bar-fill"></div></div></div>
+      </section>
+
+      <!-- Care action dock -->
+      <nav id="care-dock" class="hidden">
+        <button class="care-btn" data-action="pet"><span>🖐️</span><label>Pet</label></button>
+        <button class="care-btn" data-action="feed"><span>🍖</span><label>Feed</label></button>
+        <button class="care-btn" data-action="water"><span>💧</span><label>Water</label></button>
+        <button class="care-btn" data-action="clean"><span>🧼</span><label>Clean</label></button>
+        <button class="care-btn" data-action="play"><span>🎾</span><label>Play</label></button>
+        <button class="care-btn" data-action="train"><span>🎯</span><label>Train</label></button>
+        <button class="care-btn" data-action="sleep"><span>😴</span><label>Sleep</label></button>
+      </nav>
+
+      <!-- Toast messages -->
+      <div id="toast-wrap"></div>
+
+      <!-- Modal host -->
+      <div id="modal-root" class="modal-root hidden"></div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

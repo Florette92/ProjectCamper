@@ -65,6 +65,74 @@ body {
   100% { opacity: 0; transform: translate(-50%, -150%) scale(0.9); }
 }
 
+/* Draggable care tool (fruit / water bowl / sponge). */
+.tool-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+}
+
+.care-tool {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-size: 44px;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  filter: drop-shadow(0 0 10px rgba(123, 224, 255, 0.7));
+  transition: filter 0.15s ease, transform 0.12s ease;
+  animation: tool-pop 0.25s ease-out;
+}
+
+.care-tool.grabbed {
+  cursor: grabbing;
+}
+
+.care-tool.over {
+  filter: drop-shadow(0 0 18px rgba(255, 206, 107, 0.95));
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+@keyframes tool-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.tool-cancel {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+/* Grime specks that sit on the creature while it is dirty. */
+#dirt-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.dirt-speck {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  border-radius: 45% 55% 52% 48%;
+  background: radial-gradient(circle at 35% 35%, #7a5a34, #4a3418 70%);
+  opacity: 0.82;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
+}
+
 .hidden {
   display: none !important;
 }

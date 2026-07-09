@@ -194,6 +194,25 @@ export class SceneManager {
     this.mood = mood;
   }
 
+  // Screen-space circle (px) covering the current creature, for placing DOM
+  // overlays (dirt, tools) that track the creature as it hovers and sways.
+  // Returns null when there is no creature.
+  creatureScreenCircle() {
+    if (!this.currentMesh) return null;
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    const center = new THREE.Vector3();
+    this.petHitProxy.getWorldPosition(center);
+    const edge = center.clone();
+    center.project(this.camera);
+    edge.x += this.petHitProxy.geometry.parameters.radius;
+    edge.project(this.camera);
+    const x = rect.left + (center.x * 0.5 + 0.5) * rect.width;
+    const y = rect.top + (-center.y * 0.5 + 0.5) * rect.height;
+    const ex = rect.left + (edge.x * 0.5 + 0.5) * rect.width;
+    return { x, y, r: Math.abs(ex - x) };
+  }
+
   // Returns true if the screen-space pointer is over the current creature.
   pointerOverCreature(clientX, clientY) {
     if (!this.currentMesh) return false;

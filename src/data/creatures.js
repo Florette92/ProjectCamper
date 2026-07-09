@@ -35,7 +35,7 @@ export const SPECIES = {
     // Personality: multipliers applied to base decay rates (higher = drains faster).
     decay: { hunger: 1.15, hydration: 1.35, cleanliness: 0.9, happiness: 1.0, energy: 1.1 },
     favourite: 'train',
-    build: { shape: 'biped', horns: true, tail: 'flame', wings: false }
+    build: { shape: 'foxfire', tail: 'flame', wings: false }
   },
 
   aquari: {

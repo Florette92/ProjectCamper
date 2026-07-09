@@ -298,13 +298,166 @@ function buildBody(def, scale) {
   return group;
 }
 
+// ---- Fire kitsune: chibi nine-tailed fox ----------------------------------
+// A single fluffy, tapering flame tail built from stacked spheres following a
+// gently up-curling bezier, so it reads as a wisp of holographic fire.
+function buildFlameTail(baseMat, tipMat) {
+  const tail = new THREE.Group();
+  const curve = new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 0.4, -0.42),
+    new THREE.Vector3(0, 0.95, -0.2)
+  );
+  const N = 9;
+  for (let i = 0; i < N; i++) {
+    const s = i / (N - 1);
+    const r = 0.17 * (1 - s * 0.72); // taper toward a fine flame tip
+    const seg = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), i >= N - 3 ? tipMat : baseMat);
+    seg.position.copy(curve.getPoint(s));
+    tail.add(seg);
+  }
+  return tail;
+}
+
+// A large upright triangular fox ear with an inner accent.
+function buildFoxEar(sx, bodyMat, innerMat) {
+  const ear = new THREE.Group();
+  const outer = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.44, 4), bodyMat);
+  const inner = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.34, 4), innerMat);
+  inner.position.z = 0.03;
+  inner.position.y = -0.02;
+  ear.add(outer, inner);
+  ear.rotation.z = sx * -0.28;
+  ear.rotation.x = -0.12;
+  return ear;
+}
+
+function buildFox(def, scale, tailCount) {
+  const group = new THREE.Group();
+  const p = def.palette;
+  const bodyMat = mat(p.body, { glow: true });
+  const accentMat = mat(p.accent, { glow: true });
+  const bellyMat = mat(p.belly);
+
+  const anim = { type: 'creature', wings: [], legs: [], tail: null, head: null };
+
+  // Upright chibi torso: pear-shaped, cream belly.
+  const torso = new THREE.Mesh(new THREE.SphereGeometry(0.4, 24, 24), bodyMat);
+  torso.scale.set(0.9, 1.15, 0.85);
+  torso.position.y = 0.66;
+  torso.castShadow = true;
+  group.add(torso);
+
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 20), bellyMat);
+  belly.scale.set(0.72, 1.0, 0.55);
+  belly.position.set(0, 0.6, 0.26);
+  group.add(belly);
+
+  // Big chibi head.
+  const head = new THREE.Group();
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.5, 28, 28), bodyMat);
+  skull.scale.set(1.02, 0.96, 0.98);
+  skull.castShadow = true;
+  head.add(skull);
+
+  // Cheek fluff tufts.
+  for (const sx of [-1, 1]) {
+    const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.24, 5), bellyMat);
+    tuft.position.set(sx * 0.44, -0.08, 0.08);
+    tuft.rotation.z = sx * (Math.PI / 2);
+    head.add(tuft);
+  }
+
+  // Big expressive eyes.
+  const eyeL = eyeMesh(p.eye);
+  const eyeR = eyeMesh(p.eye);
+  eyeL.scale.setScalar(1.55);
+  eyeR.scale.setScalar(1.55);
+  eyeL.position.set(-0.19, 0.04, 0.4);
+  eyeR.position.set(0.19, 0.04, 0.4);
+  head.add(eyeL, eyeR);
+  anim.eyes = [eyeL, eyeR];
+
+  // Snout + nose.
+  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), bellyMat);
+  snout.scale.set(1, 0.72, 0.9);
+  snout.position.set(0, -0.14, 0.44);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), mat(p.eye));
+  nose.position.set(0, -0.1, 0.58);
+  head.add(snout, nose);
+
+  // Fiery brow markings.
+  for (const sx of [-1, 1]) {
+    const brow = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 4), accentMat);
+    brow.position.set(sx * 0.14, 0.34, 0.36);
+    brow.rotation.z = sx * -0.5;
+    head.add(brow);
+  }
+
+  // Big fox ears.
+  const earL = buildFoxEar(-1, bodyMat, accentMat);
+  const earR = buildFoxEar(1, bodyMat, accentMat);
+  earL.position.set(-0.26, 0.46, -0.02);
+  earR.position.set(0.26, 0.46, -0.02);
+  head.add(earL, earR);
+
+  head.position.y = 1.24;
+  group.add(head);
+  anim.head = head;
+
+  // Little arms held forward, chibi style.
+  for (const sx of [-1, 1]) {
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.2, 6, 10), bodyMat);
+    arm.position.set(sx * 0.4, 0.62, 0.08);
+    arm.rotation.z = sx * 0.5;
+    arm.rotation.x = -0.4;
+    group.add(arm);
+  }
+
+  // Short legs + paws.
+  for (const sx of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.16, 6, 10), bodyMat);
+    leg.castShadow = true;
+    leg.position.set(sx * 0.19, 0.22, 0.02);
+    group.add(leg);
+    anim.legs.push(leg);
+    const paw = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 12), accentMat);
+    paw.scale.set(1, 0.55, 1.35);
+    paw.position.set(sx * 0.19, 0.06, 0.1);
+    group.add(paw);
+  }
+
+  // Fan of curling flame tails, spread horizontally behind the fox. The whole
+  // fan is parented to anim.tail so the idle loop sways it as one.
+  const tailFan = new THREE.Group();
+  const tipMat = mat(p.belly, { glow: true });
+  for (let i = 0; i < tailCount; i++) {
+    const t = buildFlameTail(accentMat, tipMat);
+    const frac = tailCount === 1 ? 0 : i / (tailCount - 1) - 0.5; // -0.5 .. 0.5
+    t.rotation.y = frac * 1.9;
+    t.rotation.z = frac * 0.5;
+    t.rotation.x = -0.2 - Math.abs(frac) * 0.25;
+    t.scale.setScalar(1 - Math.abs(frac) * 0.18);
+    tailFan.add(t);
+  }
+  tailFan.position.set(0, 0.5, -0.34);
+  group.add(tailFan);
+  anim.tail = tailFan;
+
+  group.scale.setScalar(scale);
+  group.userData.anim = anim;
+  return group;
+}
+
 export function buildCreatureMesh(speciesId, stage) {
   const def = SPECIES[speciesId];
   if (!def) throw new Error(`Unknown species: ${speciesId}`);
 
   let group;
   if (stage === 'egg') group = buildEgg(def);
-  else if (stage === 'adolescent') group = buildBody(def, 0.7);
+  else if (def.build.shape === 'foxfire') {
+    group = buildFox(def, stage === 'adult' ? 1.05 : 0.72, stage === 'adult' ? 9 : 5);
+  } else if (stage === 'adolescent') group = buildBody(def, 0.7);
   else group = buildBody(def, 1.05);
 
   group.userData.speciesId = speciesId;

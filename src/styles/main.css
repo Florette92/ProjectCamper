@@ -42,6 +42,27 @@ body {
   width: 100%;
   height: 100%;
   display: block;
+  cursor: grab;
+}
+
+#scene.petting {
+  cursor: grabbing;
+}
+
+/* Floating heart left behind while petting the creature. */
+.pet-heart {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 60;
+  animation: pet-heart-float 0.9s ease-out forwards;
+  filter: drop-shadow(0 0 6px rgba(255, 120, 190, 0.8));
+}
+
+@keyframes pet-heart-float {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  25% { opacity: 1; transform: translate(-50%, -70%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -150%) scale(0.9); }
 }
 
 .hidden {

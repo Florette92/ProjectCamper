@@ -34,6 +34,16 @@ export class SceneManager {
     this.reaction = null; // { type, until }
     this.orbit = 0;
 
+    // Pointer picking for petting: an invisible proxy sphere rides with the
+    // creature so stroking anywhere over it counts, even between meshes.
+    this.raycaster = new THREE.Raycaster();
+    this._ndc = new THREE.Vector2();
+    this.petHitProxy = new THREE.Mesh(
+      new THREE.SphereGeometry(1.25, 16, 16),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    this.creatureGroup.add(this.petHitProxy);
+
     this._buildLights();
     this._buildProjector();
     this._buildComposer();
@@ -182,6 +192,17 @@ export class SceneManager {
 
   setMood(mood) {
     this.mood = mood;
+  }
+
+  // Returns true if the screen-space pointer is over the current creature.
+  pointerOverCreature(clientX, clientY) {
+    if (!this.currentMesh) return false;
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return false;
+    this._ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    this._ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this._ndc, this.camera);
+    return this.raycaster.intersectObject(this.petHitProxy, false).length > 0;
   }
 
   // Trigger a short reaction animation: 'happy' bounce, 'eat', 'shake', 'sleep'.

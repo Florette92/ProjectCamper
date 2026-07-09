@@ -23,7 +23,9 @@ export const CARE_ACTIONS = {
   clean: { label: 'Clean', cleanliness: 45, happiness: 5, xp: 6 },
   play: { label: 'Play', happiness: 18, energy: -12, hunger: -6, xp: 10, minigame: 'fetch' },
   train: { label: 'Train', happiness: 6, energy: -16, hunger: -8, xp: 18, discipline: 4, minigame: 'reflex' },
-  sleep: { label: 'Sleep', energy: 60, health: 6, happiness: 4, xp: 4 }
+  // Sleep grants no instant energy — it recovers gradually while asleep
+  // (see Creature.tick), so the creature stays visibly asleep for a while.
+  sleep: { label: 'Sleep', health: 6, happiness: 4, xp: 4 }
 };
 
 // XP needed for each level (level grows within a stage; purely cosmetic progress).

@@ -7,9 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist -r https://github.com/Florette92/ProjectCamper.git"
+    "preview": "vite preview"
   },
   "keywords": [
     "threejs",
@@ -23,7 +21,6 @@
     "three": "^0.181.2"
   },
   "devDependencies": {
-    "gh-pages": "^6.3.0",
     "vite": "^7.2.2"
   }
 }

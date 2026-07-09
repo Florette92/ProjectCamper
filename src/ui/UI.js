@@ -31,6 +31,8 @@ export class UI {
     });
 
     this.game.onChange(() => this.refresh());
+
+    this._initOverlays();
   }
 
   // ---- start / boot ---------------------------------------------------------
@@ -192,8 +194,17 @@ export class UI {
 
   // ---- care actions ---------------------------------------------------------
   _wireCareButtons() {
+    // feed / water / clean are hands-on: they spawn a tool you drag onto the
+    // creature. The rest (play / train / sleep) stay as instant button actions.
+    const GESTURE = { feed: '🍎', water: '🥣', clean: '🧽' };
     this.careDock.querySelectorAll('.care-btn').forEach((btn) => {
-      btn.addEventListener('click', () => this.doCare(btn.dataset.action));
+      const action = btn.dataset.action;
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        if (action === 'clean') this._startClean();
+        else if (GESTURE[action]) this._startTool(action, GESTURE[action]);
+        else this.doCare(action);
+      });
     });
   }
 
@@ -315,6 +326,256 @@ export class UI {
     setTimeout(() => heart.remove(), 900);
   }
 
+  // ---- hands-on tools (feed / water) ---------------------------------------
+  // Spawns a tool emoji you drag onto the creature. Dropping it over the
+  // creature applies the matching care action.
+  _startTool(action, emoji) {
+    const c = this.game.active;
+    if (!c) return;
+    this._dismissTool();
+
+    const layer = document.createElement('div');
+    layer.className = 'tool-layer';
+    const tool = document.createElement('div');
+    tool.className = 'care-tool';
+    tool.textContent = emoji;
+    const cancel = document.createElement('button');
+    cancel.className = 'tool-cancel';
+    cancel.textContent = '✕';
+    layer.append(tool, cancel);
+    document.getElementById('app').appendChild(layer);
+    this._toolLayer = layer;
+
+    const circle = this.scene.creatureScreenCircle();
+    const startX = circle ? circle.x : window.innerWidth / 2;
+    const startY = circle ? circle.y + circle.r + 96 : window.innerHeight * 0.72;
+    const place = (x, y) => {
+      tool.style.left = `${x}px`;
+      tool.style.top = `${y}px`;
+    };
+    place(startX, startY);
+    const verb = action === 'feed' ? 'feed' : 'give it a drink';
+    this.toast(`Drag the ${emoji} onto your creature to ${verb}.`);
+
+    let dragging = false;
+    let ox = 0;
+    let oy = 0;
+    const onDown = (e) => {
+      dragging = true;
+      const r = tool.getBoundingClientRect();
+      ox = e.clientX - (r.left + r.width / 2);
+      oy = e.clientY - (r.top + r.height / 2);
+      tool.classList.add('grabbed');
+      e.preventDefault();
+    };
+    const onMove = (e) => {
+      if (!dragging) return;
+      place(e.clientX - ox, e.clientY - oy);
+      tool.classList.toggle('over', this.scene.pointerOverCreature(e.clientX, e.clientY));
+    };
+    const onUp = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      tool.classList.remove('grabbed', 'over');
+      if (this.scene.pointerOverCreature(e.clientX, e.clientY)) {
+        this._applyToolCare(action, e.clientX, e.clientY);
+        this._dismissTool();
+      } else {
+        place(startX, startY); // snap back for another try
+      }
+    };
+
+    tool.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    cancel.addEventListener('click', () => this._dismissTool());
+    this._toolCleanup = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }
+
+  _applyToolCare(action, x, y) {
+    const c = this.game.active;
+    if (!c) return;
+    const res = c.applyCare(action);
+    if (!res.ok) {
+      this.toast(res.reason);
+      return;
+    }
+    this._reactTo(action, res);
+    this.game.save();
+    this.refresh();
+    this._spawnHeart(x, y, 1);
+    if (res.evolved) {
+      this.toast(`🎉 ${c.name} evolved into a ${STAGE_LABELS[res.evolved]}!`);
+      this.scene.playReaction('spin');
+    } else {
+      const def = CARE_ACTIONS[action];
+      const fav = res.favourite ? ' (favourite! ✨)' : '';
+      this.toast(`${def.label} · +${res.xp} XP${fav}`);
+    }
+  }
+
+  _dismissTool() {
+    if (this._toolCleanup) this._toolCleanup();
+    this._toolCleanup = null;
+    if (this._toolLayer) this._toolLayer.remove();
+    this._toolLayer = null;
+  }
+
+  // ---- cleaning (sponge + dirt) --------------------------------------------
+  _startClean() {
+    const c = this.game.active;
+    if (!c) return;
+    this._dismissTool();
+
+    // Guarantee something to scrub: top the creature up with grime specks.
+    this._cleaning = true;
+    while (this._dirt.length < 8) this._addSpeck();
+
+    const layer = document.createElement('div');
+    layer.className = 'tool-layer';
+    const sponge = document.createElement('div');
+    sponge.className = 'care-tool sponge';
+    sponge.textContent = '🧽';
+    const cancel = document.createElement('button');
+    cancel.className = 'tool-cancel';
+    cancel.textContent = '✕';
+    layer.append(sponge, cancel);
+    document.getElementById('app').appendChild(layer);
+    this._toolLayer = layer;
+    this.toast('Scrub the sponge over your creature to wash off the grime.');
+
+    const place = (x, y) => {
+      sponge.style.left = `${x}px`;
+      sponge.style.top = `${y}px`;
+    };
+    const circle = this.scene.creatureScreenCircle();
+    place(circle ? circle.x : window.innerWidth / 2, circle ? circle.y + circle.r + 96 : window.innerHeight * 0.72);
+
+    let scrubbing = false;
+    const scrubAt = (x, y) => {
+      this._scrubDirt(x, y);
+      if (this._dirt.length === 0) this._finishClean();
+    };
+    const onDown = (e) => {
+      scrubbing = true;
+      sponge.classList.add('grabbed');
+      place(e.clientX, e.clientY);
+      if (this.scene.pointerOverCreature(e.clientX, e.clientY)) scrubAt(e.clientX, e.clientY);
+      e.preventDefault();
+    };
+    const onMove = (e) => {
+      if (!scrubbing) return;
+      place(e.clientX, e.clientY);
+      const over = this.scene.pointerOverCreature(e.clientX, e.clientY);
+      sponge.classList.toggle('over', over);
+      if (over) scrubAt(e.clientX, e.clientY);
+    };
+    const onUp = () => {
+      scrubbing = false;
+      sponge.classList.remove('grabbed', 'over');
+    };
+    sponge.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    cancel.addEventListener('click', () => {
+      this._cleaning = false;
+      this._dismissTool();
+      this.refresh();
+    });
+    this._toolCleanup = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }
+
+  _finishClean() {
+    const c = this.game.active;
+    this._cleaning = false;
+    this._dismissTool();
+    if (!c) return;
+    const res = c.applyCare('clean');
+    this._reactTo('clean', res);
+    this.game.save();
+    this.refresh();
+    if (res.ok) {
+      const def = CARE_ACTIONS.clean;
+      this.toast(`Squeaky clean! ${def.label} · +${res.xp} XP ✨`);
+    }
+  }
+
+  // ---- dirt overlay ---------------------------------------------------------
+  _initOverlays() {
+    this._dirt = [];
+    this._cleaning = false;
+    this.dirtLayer = document.createElement('div');
+    this.dirtLayer.id = 'dirt-layer';
+    this.dirtLayer.setAttribute('aria-hidden', 'true');
+    document.getElementById('app').appendChild(this.dirtLayer);
+
+    const frame = () => {
+      const circle = this.scene.creatureScreenCircle();
+      if (circle && this._dirt.length) {
+        for (const s of this._dirt) {
+          s.el.style.left = `${circle.x + s.nx * circle.r * 0.82}px`;
+          s.el.style.top = `${circle.y + s.ny * circle.r * 0.82}px`;
+        }
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+
+  _addSpeck() {
+    // Random point inside the unit disk (sqrt keeps it uniform, not centre-heavy).
+    const a = Math.random() * Math.PI * 2;
+    const rad = Math.sqrt(Math.random());
+    const el = document.createElement('div');
+    el.className = 'dirt-speck';
+    const size = 8 + Math.random() * 10;
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+    this.dirtLayer.appendChild(el);
+    this._dirt.push({ el, nx: Math.cos(a) * rad, ny: Math.sin(a) * rad });
+  }
+
+  _removeSpeck(speck) {
+    speck.el.remove();
+    this._dirt = this._dirt.filter((s) => s !== speck);
+  }
+
+  _scrubDirt(x, y) {
+    const circle = this.scene.creatureScreenCircle();
+    if (!circle) return;
+    const radius = Math.max(34, circle.r * 0.32);
+    for (const s of [...this._dirt]) {
+      const sx = circle.x + s.nx * circle.r * 0.82;
+      const sy = circle.y + s.ny * circle.r * 0.82;
+      if (Math.hypot(sx - x, sy - y) <= radius) {
+        this._removeSpeck(s);
+        this._spawnHeart(sx, sy, 0.4);
+      }
+    }
+  }
+
+  // Match the number of grime specks to how dirty the creature is. Skipped
+  // while actively cleaning so scrubbed-off dirt doesn't respawn mid-bath.
+  _syncDirt() {
+    if (this._cleaning) return;
+    const c = this.game.active;
+    if (!c) {
+      while (this._dirt.length) this._removeSpeck(this._dirt[0]);
+      return;
+    }
+    const MAX_SPECKS = 14;
+    const dirtiness = Math.max(0, (70 - c.stats.cleanliness) / 70);
+    const desired = Math.round(dirtiness * MAX_SPECKS);
+    while (this._dirt.length < desired) this._addSpeck();
+    while (this._dirt.length > desired) this._removeSpeck(this._dirt[this._dirt.length - 1]);
+  }
+
   _reactTo(action, res) {
     if (action === 'clean' || action === 'water') this.scene.playReaction('shake');
     else if (action === 'sleep') this.scene.setMood('sleep');
@@ -362,6 +623,8 @@ export class UI {
       const a = btn.dataset.action;
       btn.disabled = c.stage === 'egg' && !eggAllowed.has(a);
     });
+
+    this._syncDirt();
   }
 
   // ---- helpers --------------------------------------------------------------

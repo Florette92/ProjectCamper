@@ -14,6 +14,13 @@ export const BASE_DECAY = {
   energy: 0.06
 };
 
+// The need bars that can run empty and drag the others down.
+export const NEED_STATS = ['hunger', 'hydration', 'cleanliness', 'happiness', 'energy'];
+
+// Extra decay per second applied equally to every bar (needs + health) for each
+// need bar that is fully empty. Two empty bars => 2x this rate on all bars, etc.
+export const EMPTY_BAR_PENALTY = 0.5;
+
 // How much each care action restores / changes stats, plus XP awarded.
 // `energy` costs are negative (actions tire the creature) except sleep.
 export const CARE_ACTIONS = {

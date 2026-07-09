@@ -3,7 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { buildCreatureMesh } from '../creatures/CreatureFactory.js';
+import { buildCreatureMesh, updateHoloTime, resetHoloShaders } from '../creatures/CreatureFactory.js';
 import { SPECIES } from '../data/creatures.js';
 
 // Owns the Three.js renderer, camera, lighting, the little habitat diorama and
@@ -60,7 +60,7 @@ export class SceneManager {
     key.position.set(3, 6, 4);
     this.scene.add(key);
 
-    // Coloured accent lights that give the volumetric beam its tint.
+    // Coloured accent lights that tint the creature and emitter.
     const cyan = new THREE.PointLight(0x35e6ff, 8, 12, 2);
     cyan.position.set(0, 0.2, 0);
     this.scene.add(cyan);
@@ -102,22 +102,7 @@ export class SceneManager {
     this.scene.add(innerRing);
     this.emitterRingInner = innerRing;
 
-    // Volumetric-ish projection cone (additive, transparent) rising from the base.
-    const coneMat = new THREE.MeshBasicMaterial({
-      color: 0x2fd8ff,
-      transparent: true,
-      opacity: 0.06,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(1.15, 3.2, 48, 1, true), coneMat);
-    cone.position.y = 1.2;
-    cone.rotation.x = Math.PI; // wide end at the base
-    this.scene.add(cone);
-    this.beam = cone;
-
-    // Reflected glow puddle under the beam.
+    // Reflected glow puddle under the emitter.
     const glow = new THREE.Mesh(
       new THREE.CircleGeometry(1.25, 48),
       new THREE.MeshBasicMaterial({ color: 0x2fd8ff, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false })
@@ -126,7 +111,7 @@ export class SceneManager {
     glow.position.y = -0.35;
     this.scene.add(glow);
 
-    // Floating holo-dust particles inside the beam.
+    // Floating holo-dust particles rising from the emitter.
     const dustGeo = new THREE.BufferGeometry();
     const dustCount = 120;
     const pos = new Float32Array(dustCount * 3);
@@ -172,6 +157,7 @@ export class SceneManager {
       this.creatureGroup.remove(this.currentMesh);
       this._dispose(this.currentMesh);
     }
+    resetHoloShaders();
     this.currentMesh = buildCreatureMesh(speciesId, stage);
     this.creatureGroup.add(this.currentMesh);
     this._shownSpecies = speciesId;
@@ -262,8 +248,10 @@ export class SceneManager {
     this.creatureGroup.position.y = 0.4 + Math.sin(t * 1.3) * 0.06;
     this.creatureGroup.rotation.y = Math.sin(t * 0.4) * 0.35;
 
-    // Projector animation: counter-rotating emitter rings, drifting dust,
-    // and a flickering beam for that unstable-hologram vibe.
+    // Advance the creature's holographic scanline/flicker shader.
+    updateHoloTime(t);
+
+    // Projector animation: counter-rotating emitter rings and drifting dust.
     if (this.emitterRing) this.emitterRing.rotation.z = t * 0.6;
     if (this.emitterRingInner) this.emitterRingInner.rotation.z = -t * 0.9;
     if (this.dust) {
@@ -275,7 +263,6 @@ export class SceneManager {
       }
       this.dust.geometry.attributes.position.needsUpdate = true;
     }
-    if (this.beam) this.beam.material.opacity = 0.05 + Math.abs(Math.sin(t * 7)) * 0.03;
 
     // Slow idle camera drift for a lively feel.
     this.orbit += dt * 0.08;

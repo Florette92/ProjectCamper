@@ -1,6 +1,16 @@
 import * as THREE from 'three';
 import { SPECIES } from '../data/creatures.js';
 
+// Live shaders for holographic parts, so the render loop can advance their
+// scanline animation. Cleared whenever a creature is rebuilt.
+const holoShaders = [];
+export function updateHoloTime(t) {
+  for (const s of holoShaders) s.uniforms.uTime.value = t;
+}
+export function resetHoloShaders() {
+  holoShaders.length = 0;
+}
+
 // Builds a fully procedural 3D creature out of Three.js primitives.
 // No external model assets are required — every species/stage combination is
 // assembled from spheres, capsules, cones and tori so the game is self-contained.
@@ -16,12 +26,13 @@ function mat(color, { flat = false, glow = false } = {}) {
   const c = new THREE.Color(color);
   const m = new THREE.MeshStandardMaterial({
     color: c,
-    emissive: c.clone().multiplyScalar(glow ? 0.6 : 0.4),
-    emissiveIntensity: glow ? 0.9 : 0.6,
-    roughness: 0.4,
+    emissive: c.clone().multiplyScalar(glow ? 0.7 : 0.5),
+    emissiveIntensity: glow ? 1.05 : 0.7,
+    roughness: 0.35,
     metalness: 0.0,
     transparent: true,
-    opacity: 0.88,
+    opacity: 0.82,
+    depthWrite: true,
     flatShading: flat
   });
   applyFresnel(m, c);
@@ -32,14 +43,16 @@ function mat(color, { flat = false, glow = false } = {}) {
 // onBeforeCompile so the creature's edges brighten toward the camera.
 function applyFresnel(material, color) {
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uRimColor = { value: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.4) };
-    shader.uniforms.uRimPower = { value: 2.6 };
+    shader.uniforms.uRimColor = { value: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.55) };
+    shader.uniforms.uRimPower = { value: 2.2 };
+    shader.uniforms.uTime = { value: 0 };
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
         `#include <common>
          uniform vec3 uRimColor;
-         uniform float uRimPower;`
+         uniform float uRimPower;
+         uniform float uTime;`
       )
       // Inject at the very end of main() where the view-space `normal` and
       // `vViewPosition` are always in scope (works for flat- and smooth-shaded
@@ -47,9 +60,18 @@ function applyFresnel(material, color) {
       .replace(
         '#include <dithering_fragment>',
         `#include <dithering_fragment>
+         // View-dependent rim glow makes the silhouette read as a hologram.
          float fresnel = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), uRimPower);
-         gl_FragColor.rgb += uRimColor * fresnel * 0.7;`
+         gl_FragColor.rgb += uRimColor * fresnel * 1.15;
+         // Travelling horizontal scanlines + gentle flicker for the projected look.
+         float scan = 0.5 + 0.5 * sin((vViewPosition.y * 42.0) - uTime * 4.0);
+         gl_FragColor.rgb += uRimColor * scan * 0.06;
+         float flicker = 0.97 + 0.03 * sin(uTime * 40.0);
+         gl_FragColor.rgb *= flicker;
+         // Keep the rim opaque so the glowing edge stays crisp against the void.
+         gl_FragColor.a = clamp(gl_FragColor.a + fresnel * 0.4, 0.0, 1.0);`
       );
+    holoShaders.push(shader);
   };
 }
 

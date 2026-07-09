@@ -23,6 +23,7 @@ export class UI {
     this.toastWrap = document.getElementById('toast-wrap');
 
     this._wireCareButtons();
+    this._wirePetting();
     this._wireTopbar();
     this._modalClosable = true;
     this.modalRoot.addEventListener('click', (e) => {
@@ -66,6 +67,10 @@ export class UI {
     this.statsPanel.classList.remove('hidden');
     this.careDock.classList.remove('hidden');
     this.refresh();
+    if (!this._petHintShown) {
+      this._petHintShown = true;
+      this.toast('Stroke your creature with the mouse to pet it. 🖐️');
+    }
   }
 
   // ---- hatch / species picker ----------------------------------------------
@@ -223,6 +228,91 @@ export class UI {
       const fav = res.favourite ? ' (favourite! ✨)' : '';
       this.toast(`${def.label} · +${res.xp} XP${fav}`);
     }
+  }
+
+  // Pet by stroking the creature with the pointer. Accumulated pointer travel
+  // while hovering the creature fills a "stroke"; each completed stroke applies
+  // the pet care action, with a short cooldown so fast dragging can't spam it.
+  _wirePetting() {
+    const canvas = this.scene.canvas;
+    const STROKE_DISTANCE = 240; // px of travel over the creature per pet
+    const COOLDOWN_MS = 350;
+    let stroking = false;
+    let lastX = 0;
+    let lastY = 0;
+    let travel = 0;
+    let lastPet = 0;
+
+    const onDown = (e) => {
+      if (!this.game.active) return;
+      if (!this.scene.pointerOverCreature(e.clientX, e.clientY)) return;
+      stroking = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      travel = 0;
+      canvas.classList.add('petting');
+    };
+
+    const onMove = (e) => {
+      if (!stroking) return;
+      const over = this.scene.pointerOverCreature(e.clientX, e.clientY);
+      canvas.classList.toggle('petting', over);
+      if (!over) {
+        lastX = e.clientX;
+        lastY = e.clientY;
+        return;
+      }
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      travel += Math.hypot(dx, dy);
+      this._spawnHeart(e.clientX, e.clientY, 0.35);
+
+      if (travel >= STROKE_DISTANCE && Date.now() - lastPet >= COOLDOWN_MS) {
+        travel = 0;
+        lastPet = Date.now();
+        this._petStroke(e.clientX, e.clientY);
+      }
+    };
+
+    const onUp = () => {
+      stroking = false;
+      canvas.classList.remove('petting');
+    };
+
+    canvas.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+
+  // One completed pet stroke: reward + feedback.
+  _petStroke(x, y) {
+    const c = this.game.active;
+    if (!c) return;
+    const res = c.applyCare('pet');
+    if (!res.ok) return;
+    this.scene.playReaction('bounce');
+    this._spawnHeart(x, y, 1);
+    this.game.save();
+    this.refresh();
+    if (res.evolved) {
+      this.toast(`🎉 ${c.name} evolved into a ${STAGE_LABELS[res.evolved]}!`);
+      this.scene.playReaction('spin');
+    }
+  }
+
+  // Floating heart particle at screen coordinates. `scale` shrinks trail hearts.
+  _spawnHeart(x, y, scale = 1) {
+    const heart = document.createElement('div');
+    heart.className = 'pet-heart';
+    heart.textContent = '💗';
+    heart.style.left = `${x}px`;
+    heart.style.top = `${y}px`;
+    heart.style.fontSize = `${18 * scale}px`;
+    document.getElementById('app').appendChild(heart);
+    setTimeout(() => heart.remove(), 900);
   }
 
   _reactTo(action, res) {
